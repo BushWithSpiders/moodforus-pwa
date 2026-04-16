@@ -1,4 +1,3 @@
-
 const { json, supa, makeCode } = require("./_utils");
 
 exports.handler = async (event) => {
@@ -6,6 +5,14 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     const cid = (body.cid || "").trim();
     if(!cid) return json(400, {ok:false, error:"cid required"});
+
+    // ✅ Ensure user exists (insert if missing)
+    // (просто вставим user с id, если его ещё нет)
+    const ensure = await supa(process.env, "users", "POST", [{ id: cid, updated_at: new Date().toISOString() }]);
+    // insert может вернуть конфликт — это ок, поэтому игнорим ошибки, кроме прям 401/403
+    if (!ensure.ok && (ensure.status === 401 || ensure.status === 403)) {
+      return json(500, {ok:false, error:"supabase auth error", details: ensure.data});
+    }
 
     // delete expired codes (best effort)
     await supa(process.env, `codes?expires_at=lt.${encodeURIComponent(new Date().toISOString())}`, "DELETE");
