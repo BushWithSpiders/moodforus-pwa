@@ -1,6 +1,3 @@
-
-const fetch = require("node-fetch");
-
 function json(statusCode, obj){
   return {
     statusCode,
@@ -18,13 +15,20 @@ function requireEnv(env, key){
 async function supa(env, path, method="GET", body=null){
   const url = requireEnv(env, "SUPABASE_URL") + "/rest/v1/" + path;
   const key = requireEnv(env, "SUPABASE_SERVICE_ROLE_KEY");
+
   const headers = {
     "apikey": key,
     "authorization": `Bearer ${key}`,
     "content-type": "application/json",
     "prefer": "return=representation"
   };
-  const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
   const text = await res.text();
   let data;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
