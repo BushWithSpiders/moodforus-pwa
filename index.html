@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MoodForUs</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#111111">
+  <style>
+    body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial; margin:16px; color:#111}
+    .card{border:1px solid #ddd; border-radius:12px; padding:12px; margin:12px 0}
+    button{padding:10px 12px; border-radius:10px; border:1px solid #ccc; background:#fff; margin:6px 6px 0 0}
+    input, textarea{width:100%; padding:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box}
+    .row{display:flex; gap:8px; flex-wrap:wrap}
+    .small{font-size:12px; color:#666}
+    .ok{color:#0a7}
+    .err{color:#c00}
+  </style>
+
+  <!-- OneSignal Web SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+</head>
+<body>
+  <h2>MoodForUs</h2>
+  <div class="small">
+    iPhone: чтобы работали пуши — открой в Safari → “Поделиться” → “На экран Домой”, затем запускай с иконки.
+  </div>
+
+  <div class="card">
+    <h3>1) Профиль</h3>
+    <label>Твоё имя</label>
+    <input id="name" placeholder="Арина" />
+    <div class="row">
+      <button id="saveName">Сохранить имя</button>
+      <button id="enablePush">Включить уведомления</button>
+    </div>
+    <div id="pushStatus" class="small"></div>
+  </div>
+
+  <div class="card">
+    <h3>2) Связь</h3>
+    <div class="row">
+      <button id="makeCode">Создать код</button>
+      <input id="pairCode" placeholder="Вставь код партнёра" />
+      <button id="joinCode">Подключиться</button>
+    </div>
+    <div id="pairStatus" class="small"></div>
+  </div>
+
+  <div class="card">
+    <h3>3) Анкета “Что сказать / Что сделать”</h3>
+    <label>🗣 Что сказать</label>
+    <textarea id="say" rows="2" placeholder="Например: Я рядом. Хочешь тишину или поговорить?"></textarea>
+    <label>🧩 Что сделать</label>
+    <textarea id="todo" rows="4" placeholder="Например: 1) Спроси границы 2) Предложи воду 3) Сядь рядом"></textarea>
+    <div class="row">
+      <button id="saveProfile">Сохранить анкету</button>
+      <button id="showProfile">Показать мою анкету</button>
+      <button id="clearProfile">Удалить анкету</button>
+    </div>
+    <div id="profileStatus" class="small"></div>
+  </div>
+
+  <div class="card">
+    <h3>4) Отметить состояние</h3>
+    <div id="states" class="row"></div>
+
+    <div class="row" style="margin-top:8px">
+      <label style="width:100%">Интенсивность: <span id="scaleVal">5</span>/10</label>
+      <input id="scale" type="range" min="1" max="10" value="5" />
+    </div>
+
+    <label>Нужно</label>
+    <div id="needs" class="row"></div>
+
+    <label>Границы</label>
+    <div id="bounds" class="row"></div>
+
+    <label>Комментарий (опционально)</label>
+    <textarea id="comment" rows="2" placeholder="Например: без советов, просто рядом"></textarea>
+
+    <div class="row">
+      <button id="sendMood">Отправить партнёру</button>
+    </div>
+
+    <div id="sendStatus" class="small"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
