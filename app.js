@@ -4,15 +4,32 @@ const BOUNDS = ["только_тишина","не_трогать","можно_о
 
 const API = "/.netlify/functions";
 
-// 👉 ВСТАВЬ СЮДА OneSignal App ID:
-const ONESIGNAL_APP_ID = "cdb677ec-6732-47d8-9452-483603d3264e";
+// 👉 ВСТАВЬ сюда App ID из OneSignal (ровно строку формата xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+const ONESIGNAL_APP_ID = "PASTE_YOUR_ONESIGNAL_APP_ID_HERE";
 
 function $(id){ return document.getElementById(id); }
 function setMsg(id, text, ok=true){
   const el = $(id);
+  if(!el) return;
   el.textContent = text;
   el.className = "small " + (ok ? "ok" : "err");
 }
+
+// ✅ экранная диагностика: если JS упал — ты увидишь причину прямо в приложении
+function installErrorOverlay(){
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fff;border:1px solid #f99;padding:8px;border-radius:10px;font:12px/1.3 -apple-system,system-ui;display:none;white-space:pre-wrap;max-height:40vh;overflow:auto";
+  box.id = "errbox";
+  document.body.appendChild(box);
+
+  function show(msg){
+    box.style.display = "block";
+    box.textContent = "JS ERROR:\n" + msg;
+  }
+  window.addEventListener("error", (e)=> show(e.message + "\n" + (e.filename||"") + ":" + (e.lineno||"") ));
+  window.addEventListener("unhandledrejection", (e)=> show(String(e.reason)));
+}
+
 function uuid(){
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c=>{
     const r = Math.random()*16|0, v = c==="x"?r:(r&0x3|0x8);
@@ -32,8 +49,10 @@ async function apiCall(fn, body){
   });
   return r.json();
 }
+
 function renderButtons(containerId, arr, onPick){
   const c = $(containerId);
+  if(!c) return;
   c.innerHTML = "";
   arr.forEach(v => {
     const b = document.createElement("button");
@@ -46,42 +65,48 @@ function renderButtons(containerId, arr, onPick){
 let chosen = { state:null, need:null, bound:null };
 
 async function enablePush(){
-  setMsg("pushStatus","Запрашиваю уведомления…");
+  try{
+    setMsg("pushStatus","Запрашиваю уведомления…", true);
 
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: ONESIGNAL_APP_ID,
-      notifyButton: { enable: false },
-      allowLocalhostAsSecureOrigin: true
-      serviceWorkerPath: "OneSignalSDKWorker.js",
-serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
-serviceWorkerParam: { scope: "/" }
-    });
-
-    const permission = await OneSignal.Notifications.permission;
-    if (permission !== "granted") await OneSignal.Notifications.requestPermission();
-
-    const onesignalId = await OneSignal.User.PushSubscription.id;
-    if (!onesignalId){
-      setMsg("pushStatus","Не получил subscription id. На iPhone нужно запускать как PWA с Дом.экрана.", false);
+    if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID.includes("PASTE_")) {
+      setMsg("pushStatus","Не указан ONESIGNAL_APP_ID в app.js", false);
       return;
     }
 
-    const res = await apiCall("register", { onesignalId });
-    setMsg("pushStatus", res.ok ? "Уведомления включены ✅" : (res.error||"Ошибка"), !!res.ok);
-  });
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        notifyButton: { enable: false },
+        // ✅ явно укажем воркеры OneSignal
+        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
+        serviceWorkerParam: { scope: "/" }
+      });
+
+      const perm1 = await OneSignal.Notifications.permission;
+      let sid1 = await OneSignal.User.PushSubscription.id;
+      setMsg("pushStatus", `permission=${perm1}, subId=${sid1 || "(empty)"}`, perm1 === "granted" && !!sid1);
+
+      if (perm1 !== "granted") {
+        await OneSignal.Notifications.requestPermission();
+      }
+
+      const perm2 = await OneSignal.Notifications.permission;
+      const sid2 = await OneSignal.User.PushSubscription.id;
+      setMsg("pushStatus", `after request: permission=${perm2}, subId=${sid2 || "(empty)"}`, perm2 === "granted" && !!sid2);
+
+      if (!sid2) return;
+
+      const res = await apiCall("register", { onesignalId: sid2 });
+      setMsg("pushStatus", res.ok ? "Уведомления включены ✅" : (res.error||"Ошибка register"), !!res.ok);
+    });
+  } catch(e){
+    setMsg("pushStatus", "enablePush error: " + String(e), false);
+  }
 }
 
-async function boot(){
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-
-  renderButtons("states", STATES, v=>{ chosen.state=v; setMsg("sendStatus","Состояние: "+v); });
-  renderButtons("needs", NEEDS, v=>{ chosen.need=v; });
-  renderButtons("bounds", BOUNDS, v=>{ chosen.bound=v; });
-
-  $("scale").addEventListener("input", e => $("scaleVal").textContent = e.target.value);
-
+function wireButtons(){
   $("saveName").onclick = async () => {
     const name = $("name").value.trim();
     const r = await apiCall("setName", { name });
@@ -92,7 +117,7 @@ async function boot(){
 
   $("makeCode").onclick = async () => {
     const r = await apiCall("makeCode", {});
-    if(r.ok){ $("pairCode").value = r.code; setMsg("pairStatus","Код создан ✅ Отправь партнёру: "+r.code); }
+    if(r.ok){ $("pairCode").value = r.code; setMsg("pairStatus","Код создан ✅ Отправь партнёру: "+r.code, true); }
     else setMsg("pairStatus", r.error||"Ошибка", false);
   };
 
@@ -114,7 +139,7 @@ async function boot(){
     if(r.ok){
       $("say").value  = r.profile.say || "";
       $("todo").value = r.profile.todo || "";
-      setMsg("profileStatus","Загружено ✅");
+      setMsg("profileStatus","Загружено ✅", true);
     } else setMsg("profileStatus", r.error||"Ошибка", false);
   };
 
@@ -136,4 +161,21 @@ async function boot(){
   };
 }
 
-boot();
+function boot(){
+  installErrorOverlay();
+
+  // регистрируем PWA service worker (не OneSignal)
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
+
+  renderButtons("states", STATES, v=>{ chosen.state=v; setMsg("sendStatus","Состояние: "+v, true); });
+  renderButtons("needs", NEEDS, v=>{ chosen.need=v; });
+  renderButtons("bounds", BOUNDS, v=>{ chosen.bound=v; });
+
+  $("scale").addEventListener("input", e => $("scaleVal").textContent = e.target.value);
+
+  wireButtons();
+
+  setMsg("sendStatus","Готово. Выбери состояние и отправь.", true);
+}
+
+document.addEventListener("DOMContentLoaded", boot);
