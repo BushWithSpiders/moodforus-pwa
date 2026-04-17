@@ -5,7 +5,7 @@ const BOUNDS = ["только_тишина","не_трогать","можно_о
 const API = "/.netlify/functions";
 
 // 👉 ВСТАВЬ сюда App ID из OneSignal (ровно строку формата xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-const ONESIGNAL_APP_ID = "PASTE_YOUR_ONESIGNAL_APP_ID_HERE";
+const ONESIGNAL_APP_ID = "cdb677ec-6732-47d8-9452-483603d3264e";
 
 function $(id){ return document.getElementById(id); }
 function setMsg(id, text, ok=true){
