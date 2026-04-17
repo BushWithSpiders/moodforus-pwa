@@ -54,6 +54,9 @@ async function enablePush(){
       appId: ONESIGNAL_APP_ID,
       notifyButton: { enable: false },
       allowLocalhostAsSecureOrigin: true
+      serviceWorkerPath: "OneSignalSDKWorker.js",
+serviceWorkerUpdaterPath: "OneSignalSDKUpdaterWorker.js",
+serviceWorkerParam: { scope: "/" }
     });
 
     const permission = await OneSignal.Notifications.permission;
